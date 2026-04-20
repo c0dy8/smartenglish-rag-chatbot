@@ -1,0 +1,48 @@
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv
+
+# Project
+.mcp.json
+*.log
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Data & Cache
+data/embeddings/
+*.pkl
+*.cache
+
+# n8n
+node_modules/
+.n8n/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/
+*.egg-info/

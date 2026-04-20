@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>SmartEnglish RAG — Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(8px); }
+    .glow { box-shadow: 0 0 24px rgba(99,102,241,0.25); }
+    .pulse-dot { animation: pulse 1.5s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .alert-row { animation: slide-in 0.4s ease-out; }
+    @keyframes slide-in { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    .topic-pill { transition: transform 0.2s; }
+    .topic-pill:hover { transform: scale(1.08); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #4f46e5; border-radius: 3px; }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-900 text-slate-100 min-h-screen">
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <!-- Header -->
+    <header class="flex items-center justify-between mb-8">
+      <div>
+        <h1 class="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-pink-400 bg-clip-text text-transparent">
+          SmartEnglish RAG Dashboard
+        </h1>
+        <p class="text-slate-400 text-sm">Monitoreo en tiempo real del chatbot inteligente</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="conn-dot" class="w-3 h-3 rounded-full bg-emerald-400 pulse-dot"></span>
+        <span id="conn-label" class="text-sm text-slate-300">Conectando…</span>
+      </div>
+    </header>
+
+    <!-- KPI Cards -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="card rounded-xl p-5 glow">
+        <p class="text-slate-400 text-xs uppercase tracking-wide">Consultas totales</p>
+        <p id="kpi-total" class="text-3xl font-bold mt-2 text-indigo-300">0</p>
+        <p class="text-xs text-slate-500 mt-1"><span id="kpi-qpm">0</span>/min</p>
+      </div>
+      <div class="card rounded-xl p-5">
+        <p class="text-slate-400 text-xs uppercase tracking-wide">Tasa de escalación</p>
+        <p id="kpi-esc-rate" class="text-3xl font-bold mt-2 text-amber-300">0%</p>
+        <p class="text-xs text-slate-500 mt-1"><span id="kpi-esc">0</span> escalados</p>
+      </div>
+      <div class="card rounded-xl p-5">
+        <p class="text-slate-400 text-xs uppercase tracking-wide">Tiempo promedio</p>
+        <p id="kpi-time" class="text-3xl font-bold mt-2 text-emerald-300">0 ms</p>
+        <p class="text-xs text-slate-500 mt-1">Confianza: <span id="kpi-conf">0</span></p>
+      </div>
+      <div class="card rounded-xl p-5">
+        <p class="text-slate-400 text-xs uppercase tracking-wide">Ahorro por cache</p>
+        <p id="kpi-saved" class="text-3xl font-bold mt-2 text-pink-300">$0.00</p>
+        <p class="text-xs text-slate-500 mt-1">Hit rate: <span id="kpi-hit">0%</span></p>
+      </div>
+    </section>
+
+    <!-- Charts Row -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div class="card rounded-xl p-5">
+        <h2 class="font-semibold mb-3 text-slate-200">Histórico de consultas</h2>
+        <canvas id="chart-history" height="120"></canvas>
+      </div>
+      <div class="card rounded-xl p-5">
+        <h2 class="font-semibold mb-3 text-slate-200">Tiempo de respuesta (ms)</h2>
+        <canvas id="chart-latency" height="120"></canvas>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div class="card rounded-xl p-5">
+        <h2 class="font-semibold mb-3 text-slate-200">Respuestas vs. escalaciones</h2>
+        <canvas id="chart-pie" height="120"></canvas>
+      </div>
+      <div class="card rounded-xl p-5">
+        <h2 class="font-semibold mb-3 text-slate-200">Cache: hits vs. misses</h2>
+        <canvas id="chart-cache" height="120"></canvas>
+      </div>
+    </section>
+
+    <!-- Topic map & Alerts -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div class="card rounded-xl p-5">
+        <h2 class="font-semibold mb-3 text-slate-200">Mapa de temas consultados</h2>
+        <div id="topic-cloud" class="flex flex-wrap gap-2 min-h-[120px]"></div>
+      </div>
+      <div class="card rounded-xl p-5">
+        <h2 class="font-semibold mb-3 text-slate-200 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-red-400 pulse-dot"></span>
+          Alertas de escalación
+        </h2>
+        <div id="alert-list" class="space-y-2 max-h-[220px] overflow-y-auto text-sm">
+          <p class="text-slate-500 italic">Sin alertas recientes</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Recent queries -->
+    <section class="card rounded-xl p-5 mb-8">
+      <h2 class="font-semibold mb-3 text-slate-200">Últimas consultas</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="text-slate-400 text-xs uppercase">
+            <tr>
+              <th class="text-left py-2">Hora</th>
+              <th class="text-left py-2">Consulta</th>
+              <th class="text-center py-2">Docs</th>
+              <th class="text-center py-2">Conf.</th>
+              <th class="text-center py-2">ms</th>
+              <th class="text-center py-2">Estado</th>
+            </tr>
+          </thead>
+          <tbody id="recent-body" class="divide-y divide-slate-800">
+            <tr><td colspan="6" class="text-slate-500 italic py-4 text-center">Sin consultas aún</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="text-center text-xs text-slate-500 pb-6">
+      SmartEnglish PRO — RAG ChatBot Analytics · Iniciado: <span id="started-at">—</span>
+    </footer>
+  </div>
+
+<script>
+// ---------- Chart instances ----------
+const historyChart = new Chart(document.getElementById('chart-history'), {
+  type: 'line',
+  data: { labels: [], datasets: [{
+    label: 'Consultas acumuladas', data: [],
+    borderColor: '#818cf8', backgroundColor: 'rgba(129,140,248,0.15)',
+    fill: true, tension: 0.4, pointRadius: 2
+  }]},
+  options: {
+    plugins: { legend: { labels: { color: '#cbd5e1' } } },
+    scales: { x: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } },
+              y: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } } }
+  }
+});
+
+const latencyChart = new Chart(document.getElementById('chart-latency'), {
+  type: 'line',
+  data: { labels: [], datasets: [{
+    label: 'ms promedio', data: [],
+    borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,0.15)',
+    fill: true, tension: 0.4, pointRadius: 2
+  }]},
+  options: {
+    plugins: { legend: { labels: { color: '#cbd5e1' } } },
+    scales: { x: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } },
+              y: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } } }
+  }
+});
+
+const pieChart = new Chart(document.getElementById('chart-pie'), {
+  type: 'doughnut',
+  data: { labels: ['Respondidas', 'Escaladas'],
+          datasets: [{ data: [0, 0], backgroundColor: ['#6366f1', '#f59e0b'], borderColor: '#0f172a', borderWidth: 2 }] },
+  options: { plugins: { legend: { labels: { color: '#cbd5e1' } } } }
+});
+
+const cacheChart = new Chart(document.getElementById('chart-cache'), {
+  type: 'bar',
+  data: { labels: ['Hits (cache)', 'Misses (API)'],
+          datasets: [{ data: [0, 0], backgroundColor: ['#ec4899', '#64748b'] }] },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: { x: { ticks: { color: '#cbd5e1' }, grid: { display: false } },
+              y: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } } }
+  }
+});
+
+// ---------- Render helpers ----------
+function fmtTime(ts) {
+  try { return new Date(ts).toLocaleTimeString(); } catch { return ts; }
+}
+
+function render(data) {
+  document.getElementById('kpi-total').textContent = data.total_queries;
+  document.getElementById('kpi-qpm').textContent = data.queries_per_minute;
+  document.getElementById('kpi-esc-rate').textContent = data.escalation_rate + '%';
+  document.getElementById('kpi-esc').textContent = data.total_escalations;
+  document.getElementById('kpi-time').textContent = data.avg_response_time_ms + ' ms';
+  document.getElementById('kpi-conf').textContent = data.avg_confidence;
+  document.getElementById('kpi-saved').textContent = '$' + data.cost_saved_usd.toFixed(6);
+  document.getElementById('kpi-hit').textContent = data.cache_hit_rate + '%';
+  document.getElementById('started-at').textContent = fmtTime(data.started_at);
+
+  // History chart
+  const hist = data.history || [];
+  historyChart.data.labels = hist.map(h => fmtTime(h.timestamp));
+  historyChart.data.datasets[0].data = hist.map(h => h.total_queries);
+  historyChart.update('none');
+
+  latencyChart.data.labels = hist.map(h => fmtTime(h.timestamp));
+  latencyChart.data.datasets[0].data = hist.map(h => h.avg_response_time_ms);
+  latencyChart.update('none');
+
+  // Pie
+  pieChart.data.datasets[0].data = [
+    data.total_queries - data.total_escalations,
+    data.total_escalations
+  ];
+  pieChart.update('none');
+
+  // Cache bar
+  cacheChart.data.datasets[0].data = [data.cache_hits, data.cache_misses];
+  cacheChart.update('none');
+
+  // Topics
+  const cloud = document.getElementById('topic-cloud');
+  const topics = data.top_topics || [];
+  if (topics.length === 0) {
+    cloud.innerHTML = '<p class="text-slate-500 italic">Aún sin datos suficientes</p>';
+  } else {
+    const max = Math.max(...topics.map(t => t[1]));
+    cloud.innerHTML = topics.map(([word, count]) => {
+      const scale = 0.8 + (count / max) * 1.4;
+      const hue = 220 + (count / max) * 100;
+      return `<span class="topic-pill inline-block px-3 py-1 rounded-full font-medium"
+        style="font-size:${scale}rem; background: hsla(${hue}, 70%, 60%, 0.18); color: hsl(${hue}, 80%, 75%); border: 1px solid hsla(${hue}, 70%, 60%, 0.4)">
+        ${word} <span class="text-xs opacity-70">${count}</span></span>`;
+    }).join('');
+  }
+
+  // Alerts
+  const alertList = document.getElementById('alert-list');
+  const alerts = data.escalation_alerts || [];
+  if (alerts.length === 0) {
+    alertList.innerHTML = '<p class="text-slate-500 italic">Sin alertas recientes</p>';
+  } else {
+    alertList.innerHTML = alerts.slice().reverse().map(a => `
+      <div class="alert-row bg-red-500/10 border border-red-500/30 rounded px-3 py-2">
+        <div class="flex justify-between text-xs text-red-300">
+          <span>${fmtTime(a.timestamp)}</span>
+          <span>conf: ${a.confidence}</span>
+        </div>
+        <p class="text-slate-200 mt-1">${escapeHtml(a.query)}</p>
+      </div>
+    `).join('');
+  }
+
+  // Recent queries
+  const tbody = document.getElementById('recent-body');
+  const recent = data.recent_queries || [];
+  if (recent.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-slate-500 italic py-4 text-center">Sin consultas aún</td></tr>';
+  } else {
+    tbody.innerHTML = recent.map(q => `
+      <tr class="hover:bg-slate-800/30">
+        <td class="py-2 text-slate-400 text-xs">${fmtTime(q.timestamp)}</td>
+        <td class="py-2 text-slate-200 max-w-md truncate" title="${escapeHtml(q.query)}">${escapeHtml(q.query)}</td>
+        <td class="py-2 text-center">${q.context_docs}</td>
+        <td class="py-2 text-center">${q.confidence}</td>
+        <td class="py-2 text-center text-slate-400">${q.response_time_ms}</td>
+        <td class="py-2 text-center">
+          ${q.escalated
+            ? '<span class="px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-300">escalada</span>'
+            : '<span class="px-2 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-300">ok</span>'}
+        </td>
+      </tr>
+    `).join('');
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+  ));
+}
+
+// ---------- WebSocket with reconnect ----------
+let ws;
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/api/v1/ws/metrics`);
+  const dot = document.getElementById('conn-dot');
+  const lbl = document.getElementById('conn-label');
+
+  ws.onopen = () => { dot.className = 'w-3 h-3 rounded-full bg-emerald-400 pulse-dot'; lbl.textContent = 'Conectado (tiempo real)'; };
+  ws.onmessage = (ev) => {
+    try {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === 'metrics') render(msg.data);
+    } catch (e) { console.error(e); }
+  };
+  ws.onclose = () => {
+    dot.className = 'w-3 h-3 rounded-full bg-red-400 pulse-dot';
+    lbl.textContent = 'Reconectando…';
+    setTimeout(connect, 2000);
+  };
+  ws.onerror = () => ws.close();
+}
+
+// Initial fetch (before WS loads) + connect
+fetch('/api/v1/metrics').then(r => r.json()).then(render).catch(() => {});
+connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,363 @@
+{
+  "name": "SmartEnglish RAG ChatBot - Opción B (con OpenAI en n8n)",
+  "nodes": [
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Telegram Trigger\").item.json.message.chat.id }}",
+        "text": "⏳ Tu consulta ha sido escalada a nuestro equipo de soporte. Te responderemos pronto.",
+        "additionalFields": {}
+      },
+      "id": "f433ed65-a69f-4b8f-b1e4-91abc80d6d8a",
+      "name": "Escalation Acknowledgment",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -128,
+        128
+      ],
+      "webhookId": "ef001f8a-9bd5-445f-9c1e-17f33e93963c",
+      "credentials": {
+        "telegramApi": {
+          "id": "fItSpZMIl4WlRS7X",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -720,
+        656
+      ],
+      "id": "906907b1-fec7-4a35-9428-4bbf208e7a43",
+      "name": "Supabase Vector Store",
+      "credentials": {
+        "supabaseApi": {
+          "id": "mgVc6Tlzomv0iPcP",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 500
+        }
+      },
+      "id": "ac0fae74-ad46-4472-ae4b-c4e3d88c8c37",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -848,
+        448
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "hbSOd9mLE0c1OpLu",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "51e62f6e-d530-4e8e-b192-6e69d1399f09",
+      "name": "Vector Store Retriever",
+      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "7c564477-f8c6-4f3f-a813-f7423dfc3fd9",
+      "name": "OpenAI Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -640,
+        864
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "hbSOd9mLE0c1OpLu",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.response }}",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              },
+              "rightValue": "escalar"
+            },
+            {
+              "id": "2",
+              "leftValue": "={{ $json.response }}",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              },
+              "rightValue": "equipo de soporte"
+            },
+            {
+              "id": "3",
+              "leftValue": "={{ $json.response }}",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              },
+              "rightValue": "no puedo"
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "40ec266d-c3d3-4ba0-ad66-de6ed26845dd",
+      "name": "Check Escalation Needed",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -352,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "-1002089041999",
+        "text": "=🚨 *ESCALACIÓN REQUERIDA*\n\n*Usuario:* {{ $(\"Telegram Trigger\").item.json.message.from.first_name }} (@{{ $(\"Telegram Trigger\").item.json.message.from.username }})\n*User ID:* {{ $(\"Telegram Trigger\").item.json.message.from.id }}\n*Chat ID:* {{ $(\"Telegram Trigger\").item.json.message.chat.id }}\n\n*Consulta Original:*\n{{ $(\"Telegram Trigger\").item.json.message.text }}\n\n*Respuesta del Bot:*\n{{ $(\"AI Agent\").item.json.response }}\n\n👉 Por favor, responde al usuario directamente.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "e59a124e-b87e-4930-8940-940faba2b840",
+      "name": "Notify Support Team",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        96,
+        128
+      ],
+      "webhookId": "f4b4ce48-68cf-409b-aca3-128f42b03ea9",
+      "retryOnFail": false,
+      "notesInFlow": false,
+      "credentials": {
+        "telegramApi": {
+          "id": "fItSpZMIl4WlRS7X",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1072,
+        224
+      ],
+      "id": "cd9f6f6c-f44b-4e5c-8f55-886762428bc7",
+      "name": "Telegram Trigger",
+      "webhookId": "f3b6b6f3-9f85-4c59-980e-4c3b6ec59cb9",
+      "credentials": {
+        "telegramApi": {
+          "id": "fItSpZMIl4WlRS7X",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "options": {
+          "systemPromptTemplate": "Eres un asistente virtual de una academia de inglés. Tu trabajo es ayudar a los estudiantes con información sobre clases, horarios, profesores, precios, y cualquier pregunta relacionada con la academia. Usa la información de la base de conocimientos para responder de manera precisa y amigable. Si no puedes responder con confianza a una pregunta, indica claramente que necesitas escalar la consulta al equipo de soporte.\n\nContexto: {context}"
+        }
+      },
+      "id": "cf9c31d2-9aa9-4196-9fcf-9d3d30803c25",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+      "typeVersion": 1.7,
+      "position": [
+        -816,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $(\"Telegram Trigger\").item.json.message.from.id }}",
+        "text": "={{ $(\"AI Agent\").item.json.response }}",
+        "additionalFields": {}
+      },
+      "id": "88a228df-1568-4957-86b7-7cff106c1805",
+      "name": "Send a text message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -128,
+        320
+      ],
+      "webhookId": "55241976-0476-40e6-9631-ac8ef6ac92a7",
+      "credentials": {
+        "telegramApi": {
+          "id": "fItSpZMIl4WlRS7X",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Supabase Vector Store": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Vector Store Retriever",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Escalation Needed": {
+      "main": [
+        [
+          {
+            "node": "Escalation Acknowledgment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalation Acknowledgment": {
+      "main": [
+        [
+          {
+            "node": "Notify Support Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store Retriever": {
+      "ai_retriever": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_retriever",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Support Team": {
+      "main": [
+        []
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Check Escalation Needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "1310283d-8c98-48b7-b90b-a1ed9dfa6f78",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cccdebe71bc8666719e156199cd5f5d4581d3cb930e62bdf131b0ebb5e9c12da"
+  },
+  "id": "7jakKmXdSUpJNQla",
+  "tags": []
+}
