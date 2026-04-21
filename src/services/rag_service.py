@@ -32,7 +32,7 @@ GREETING HANDLING (VERY IMPORTANT):
    - Ask how you can help.
    - DO NOT say you lack information.
    - DO NOT escalate.
-   - SET "escalate_to_human" to false.
+   - SET "escalate" to false.
 
    Example:
    User: "hola"
