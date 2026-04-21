@@ -3,6 +3,7 @@
 import json
 import hashlib
 from pathlib import Path
+from typing import Optional
 
 CACHE_DIR = Path(__file__).parent.parent.parent / "data" / "embeddings"
 CACHE_FILE = CACHE_DIR / "embeddings_cache.json"
@@ -18,7 +19,7 @@ def _hash_text(text: str) -> str:
     return hashlib.md5(text.encode()).hexdigest()
 
 
-def get_cached_embedding(text: str) -> list | None:
+def get_cached_embedding(text: str) -> Optional[list]:
     """Retrieve embedding from cache if exists."""
     ensure_cache_dir()
 
