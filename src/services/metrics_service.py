@@ -15,16 +15,7 @@ EMBEDDING_COST_PER_1K = 0.00002   # text-embedding-3-small
 CHAT_INPUT_COST_PER_1K = 0.00015  # gpt-4o-mini input
 CHAT_OUTPUT_COST_PER_1K = 0.00060 # gpt-4o-mini output
 
-STOPWORDS = {
-    "el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del", "al",
-    "y", "o", "que", "en", "a", "por", "para", "con", "sin", "es", "son",
-    "me", "mi", "tu", "su", "se", "lo", "le", "les", "si", "no", "como",
-    "cuando", "donde", "cual", "cuales", "cuanto", "cuanta", "cuantos",
-    "hola", "buenos", "dias", "tardes", "noches", "gracias", "por favor",
-    "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
-    "have", "has", "had", "do", "does", "did", "will", "would", "could",
-    "should", "what", "when", "where", "why", "how", "of", "to", "in", "for"
-}
+STOPWORDS = {}
 
 
 class MetricsTracker:
