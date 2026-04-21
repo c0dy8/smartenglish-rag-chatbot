@@ -68,12 +68,7 @@ EXAMPLES:
 - Out of scope:
   "No tengo esa información en este momento. Déjame conectarte con nuestro equipo..."
 
-OUTPUT FORMAT:
-- Always return a JSON with:
-  {
-    "answer": "<your response>",
-    "escalate": true/false
-  }
+
 """
 
 async def answer_query(user_query: str) -> dict:
