@@ -4,6 +4,40 @@ from src.services.openai_service import generate_embedding
 from src.services.supabase_service import search_documents
 from src.config import Config
 
+# List of greeting and courtesy messages that don't need context search
+GREETINGS = {
+    # Spanish
+    "hola", "holas", "buenos días", "buen día", "buenos tardes", "buena tarde",
+    "buenas noches", "buena noche", "buenos días", "qué tal", "qué onda", "hey",
+    "hi", "hello", "gracias", "muchas gracias", "de nada", "ok", "vale",
+    "claro", "seguro", "entendido", "perfecto", "genial",
+    # English
+    "hello", "hi", "hey", "thanks", "thank you", "okay", "ok", "sure", "great",
+    "perfect", "good morning", "good afternoon", "good evening", "good night",
+    "how are you", "how are you?", "what's up", "howdy"
+}
+
+def is_greeting(message: str) -> bool:
+    """
+    Check if the message is only a greeting or courtesy phrase.
+    Returns True if the message should be treated as a greeting.
+    """
+    # Normalize the message: lowercase and strip
+    normalized = message.strip().lower()
+    
+    # Check if the entire message (or very short variations) is a greeting
+    if normalized in GREETINGS:
+        return True
+    
+    # Check for common greeting patterns with minimal extra text
+    if len(normalized) < 30:  # Very short messages are likely greetings
+        # Remove common punctuation
+        cleaned = normalized.replace("?", "").replace("!", "").replace(".", "").strip()
+        if cleaned in GREETINGS:
+            return True
+    
+    return False
+
 SYSTEM_PROMPT = """You are a helpful customer support assistant for SmartEnglish PRO,
 a Colombian language academy. Your role is to answer questions about courses,
 schedules, prices, levels, certifications, and enrollment processes.
@@ -76,6 +110,34 @@ async def answer_query(user_query: str) -> dict:
     Process user query through RAG pipeline.
     Returns response and metadata.
     """
+    # Check if this is just a greeting - if so, don't escalate
+    if is_greeting(user_query):
+        try:
+            from src.services.openai_service import generate_response
+            
+            response_text = await generate_response(
+                system_prompt=SYSTEM_PROMPT,
+                user_message=user_query,
+                context=None  # No context needed for greetings
+            )
+            
+            return {
+                "response": response_text,
+                "escalate": False,  # Never escalate greetings
+                "context_used": 0,
+                "confidence": 1.0  # Greeting confidence is always high
+            }
+        except Exception as e:
+            response_text = "Sorry, I encountered an error generating a response."
+            return {
+                "response": response_text,
+                "escalate": True,
+                "error": str(e),
+                "context_used": 0,
+                "confidence": 0
+            }
+
+    # For non-greeting queries, proceed with RAG pipeline
     # Generate embedding for user query
     try:
         query_embedding = generate_embedding(user_query)
@@ -83,7 +145,9 @@ async def answer_query(user_query: str) -> dict:
         return {
             "response": "Sorry, I encountered an error processing your query. Please try again.",
             "escalate": True,
-            "error": str(e)
+            "error": str(e),
+            "context_used": 0,
+            "confidence": 0
         }
 
     # Search relevant documents
