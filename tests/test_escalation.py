@@ -28,6 +28,18 @@ class TestGreetingDetection:
             "ok",
             "vale",
             "perfecto",
+            # New: How are you variations
+            "¿cómo estás?",
+            "cómo estás",
+            "como estás",
+            "¿cómo estoy?",
+            "cómo te va",
+            "¿cómo te va?",
+            "y tú",
+            "¿y tú?",
+            "cómo te encuentras",
+            "muy bien",
+            "bien",
         ]
         for greeting in spanish_greetings:
             assert is_greeting(greeting), f"Failed to detect: {greeting}"
@@ -46,6 +58,16 @@ class TestGreetingDetection:
             "good morning",
             "good afternoon",
             "good evening",
+            # New: How are you variations
+            "how are you",
+            "how are you?",
+            "how are you doing",
+            "how's it going",
+            "how's it going?",
+            "what's up",
+            "what's up?",
+            "how do you do",
+            "how am i doing",
         ]
         for greeting in english_greetings:
             assert is_greeting(greeting), f"Failed to detect: {greeting}"
@@ -87,6 +109,18 @@ class TestGreetingDetection:
         
         # Very long messages (even if they start with greeting)
         assert not is_greeting("hola " + "x" * 100)
+    
+    def test_user_reported_cases(self):
+        """Test cases reported by users."""
+        # Case 1: How are you variations should NOT escalate
+        assert is_greeting("¿cómo estás?"), "¿cómo estás? should be detected as greeting"
+        assert is_greeting("cómo estás"), "cómo estás should be detected as greeting"
+        assert is_greeting("¿cómo estoy?"), "¿cómo estoy? should be detected as greeting"
+        assert is_greeting("¿cómo te va?"), "¿cómo te va? should be detected as greeting"
+        
+        # Case 2: Out-of-scope queries should remain as non-greetings
+        assert not is_greeting("el salmo 23"), "el salmo 23 should NOT be a greeting"
+        assert not is_greeting("dame el salmo 23"), "dame el salmo 23 should NOT be a greeting"
 
 
 # ============================================================================

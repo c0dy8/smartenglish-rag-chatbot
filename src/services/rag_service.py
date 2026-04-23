@@ -6,15 +6,33 @@ from src.config import Config
 
 # List of greeting and courtesy messages that don't need context search
 GREETINGS = {
-    # Spanish
+    # Spanish - Basic greetings
     "hola", "holas", "buenos días", "buen día", "buenos tardes", "buena tarde",
-    "buenas noches", "buena noche", "buenos días", "qué tal", "qué onda", "hey",
-    "hi", "hello", "gracias", "muchas gracias", "de nada", "ok", "vale",
-    "claro", "seguro", "entendido", "perfecto", "genial",
-    # English
-    "hello", "hi", "hey", "thanks", "thank you", "okay", "ok", "sure", "great",
-    "perfect", "good morning", "good afternoon", "good evening", "good night",
-    "how are you", "how are you?", "what's up", "howdy"
+    "buenas noches", "buena noche", "qué tal", "qué onda", "hey",
+    # Spanish - How are you variations
+    "cómo estás", "como estás", "¿cómo estás?", "¿como estás?",
+    "cómo estoy", "como estoy", "¿cómo estoy?", "¿como estoy?",
+    "cómo te va", "como te va", "¿cómo te va?", "¿como te va?",
+    "cómo va", "como va", "¿cómo va?", "¿como va?",
+    "qué tal", "¿qué tal?", "y tú", "¿y tú?", "y tu", "¿y tu?",
+    "cómo te encuentras", "como te encuentras", "¿cómo te encuentras?",
+    # Spanish - Courtesy
+    "gracias", "muchas gracias", "de nada", "ok", "vale", "está bien",
+    "claro", "seguro", "entendido", "perfecto", "genial", "excelente",
+    "muy bien", "bien", "mal", "más o menos",
+    # English - Basic greetings
+    "hello", "hi", "hey", "good morning", "good afternoon", "good evening", "good night",
+    # English - How are you variations
+    "how are you", "how are you?", "how are you doing", "how are you doing?",
+    "how's it going", "how's it going?", "how ya doing", "how ya doing?",
+    "what's up", "what's up?", "how's everything", "how's everything?",
+    "how do you do", "how do you do?", "how am i", "how am i?",
+    "how am i doing", "how am i doing?", "how you doing", "how you doing?",
+    # English - Courtesy
+    "thanks", "thank you", "thank you very much", "thanks a lot", "thank you so much",
+    "okay", "ok", "sure", "great", "perfect", "excellent", "fine", "good",
+    "not bad", "not too bad", "all good", "i'm good", "you're good",
+    "what's good", "what is good"
 }
 
 def is_greeting(message: str) -> bool:
@@ -25,15 +43,20 @@ def is_greeting(message: str) -> bool:
     # Normalize the message: lowercase and strip
     normalized = message.strip().lower()
     
+    # Normalize Spanish: remove accents for comparison
+    normalized_no_accents = normalized.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+    
     # Check if the entire message (or very short variations) is a greeting
-    if normalized in GREETINGS:
+    if normalized in GREETINGS or normalized_no_accents in GREETINGS:
         return True
     
     # Check for common greeting patterns with minimal extra text
-    if len(normalized) < 30:  # Very short messages are likely greetings
+    if len(normalized) < 50:  # Short messages are likely greetings
         # Remove common punctuation
-        cleaned = normalized.replace("?", "").replace("!", "").replace(".", "").strip()
-        if cleaned in GREETINGS:
+        cleaned = normalized.replace("?", "").replace("!", "").replace(".", "").replace(",", "").strip()
+        cleaned_no_accents = cleaned.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+        
+        if cleaned in GREETINGS or cleaned_no_accents in GREETINGS:
             return True
     
     return False
